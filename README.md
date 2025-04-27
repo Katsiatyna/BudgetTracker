@@ -35,6 +35,7 @@ Built with Spring Boot, SQLite, Thymeleaf, HTMX, and Chart.js.
 
 ```bash
 git clone https://github.com/Katsiatyna/BudgetTracker.git
+cd BudgetTracker
 ```
 2. Install Requirements
 
