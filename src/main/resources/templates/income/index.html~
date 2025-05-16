@@ -3,19 +3,16 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Outcome Page</title>
-
-    <!-- Bulma CSS Framework -->
+    <title>Income Page</title>
+    <!-- Bulma for styling -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css">
-
-    <!-- HTMX for dynamic requests -->
+    <!-- HTMX for optional interactivity (not currently used here) -->
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
 <section class="hero is-light is-fullheight">
     <div class="hero-body">
         <div class="container">
-
             <!-- Welcome Header -->
             <h1 class="title has-text-black">
                 Welcome, <span th:text="${username}"></span>!
@@ -47,11 +44,11 @@
                     </div>
                 </div>
 
-                <!-- Outcome Entry Block -->
+                <!-- Income Entry Block -->
                 <div class="column is-half">
                     <div class="box">
-                        <h2 class="title">Add Outcome</h2>
-                        <form id="outcomeForm">
+                        <h2 class="title">Add Income</h2>
+                        <form id="incomeForm">
                             <div class="field">
                                 <label class="label">Choose Category</label>
                                 <div class="control">
@@ -69,7 +66,7 @@
                                 </div>
                             </div>
                             <div class="field">
-                                <label class="label">Outcome Description</label>
+                                <label class="label">Income Description</label>
                                 <div class="control">
                                     <input class="input" type="text" id="description" name="description" placeholder="Enter description">
                                 </div>
@@ -80,16 +77,16 @@
                                     <input class="input" type="date" id="date" name="date" required>
                                 </div>
                             </div>
-                            <button type="submit" class="button is-success">Add Outcome</button>
+                            <button type="submit" class="button is-success">Add Income</button>
                         </form>
-                        <div id="outcomeResponse"></div>
+                        <div id="incomeResponse"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Outcome Table -->
+            <!-- List of Incomes -->
             <div class="box">
-                <h2 class="title">Your Outcomes</h2>
+                <h2 class="title">Your Incomes</h2>
                 <div class="table-container" style="overflow-x: auto;">
                 <table class="table is-fullwidth is-striped is-hoverable">
                     <thead>
@@ -101,8 +98,8 @@
                         <th>Actions</th>
                     </tr>
                     </thead>
-                    <tbody id="outcomeTableBody">
-                    <tr><td colspan="5" class="has-text-centered">Loading outcomes...</td></tr>
+                    <tbody id="incomeTableBody">
+                    <tr><td colspan="5" class="has-text-centered">Loading incomes...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -111,16 +108,16 @@
     </div>
 </section>
 
-<!-- Modal for Editing Outcome -->
-<div class="modal" id="editOutcomeModal">
+<!-- Modal for Editing Income -->
+<div class="modal" id="editIncomeModal">
     <div class="modal-background"></div>
     <div class="modal-card">
         <header class="modal-card-head">
-            <p class="modal-card-title">Edit Outcome</p>
+            <p class="modal-card-title">Edit Income</p>
             <button class="delete" aria-label="close" onclick="closeEditModal()"></button>
         </header>
         <section class="modal-card-body">
-            <input type="hidden" id="editOutcomeId">
+            <input type="hidden" id="editIncomeId">
             <div class="field">
                 <label class="label">Category</label>
                 <div class="select">
@@ -141,18 +138,18 @@
             </div>
         </section>
         <footer class="modal-card-foot">
-            <button class="button is-success" onclick="saveOutcomeChanges()">Save changes</button>
+            <button class="button is-success" onclick="saveIncomeChanges()">Save changes</button>
             <button class="button" onclick="closeEditModal()">Cancel</button>
         </footer>
     </div>
 </div>
 
-<!-- JavaScript Logic -->
+<!-- Script Section -->
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const userId = document.getElementById("authenticatedUserId").value;
 
-        // Populate dropdowns with categories
+        // Load category dropdowns
         fetch("/api/v1/categories")
             .then(res => res.json())
             .then(categories => {
@@ -166,29 +163,29 @@
                 });
             });
 
-        // Load outcomes
-        fetch(`/api/v1/outcomes/user/${userId}`)
+        // Load user's incomes
+        fetch(`/api/v1/incomes/user/${userId}`)
             .then(res => res.json())
-            .then(outcomes => {
-                const tableBody = document.getElementById("outcomeTableBody");
+            .then(incomes => {
+                const tableBody = document.getElementById("incomeTableBody");
                 tableBody.innerHTML = "";
-                outcomes.forEach(outcome => {
-                    const row = document.createElement("tr");
+                incomes.forEach(income => {
+                    let row = document.createElement("tr");
                     row.innerHTML = `
-                        <td>${outcome.category.category}</td>
-                        <td>${outcome.amount}</td>
-                        <td>${outcome.description}</td>
-                        <td>${outcome.date}</td>
+                        <td>${income.category.category}</td>
+                        <td>${income.amount}</td>
+                        <td>${income.description}</td>
+                        <td>${income.date}</td>
                         <td>
-                            <button class="button is-warning is-small" onclick="editOutcome(${outcome.outcomeId}, ${outcome.category.category_id}, ${Math.abs(outcome.amount)}, '${outcome.description}', '${outcome.date}')">Edit</button>
-                            <button class="button is-danger is-small" onclick="deleteOutcome(${outcome.outcomeId})">Delete</button>
+                            <button class="button is-warning is-small" onclick="editIncome(${income.incomeId}, ${income.category.category_id}, ${income.amount}, '${income.description}', '${income.date}')">Edit</button>
+                            <button class="button is-danger is-small" onclick="deleteIncome(${income.incomeId})">Delete</button>
                         </td>
                     `;
                     tableBody.appendChild(row);
                 });
             });
 
-        // Submit Category Form
+        // Handle category form submission
         document.getElementById("categoryForm").addEventListener("submit", function (e) {
             e.preventDefault();
             let name = document.getElementById("categoryName").value;
@@ -205,60 +202,57 @@
                 });
         });
 
-        // Submit Outcome Form
-        document.getElementById("outcomeForm").addEventListener("submit", function (e) {
+        // Handle income form submission
+        document.getElementById("incomeForm").addEventListener("submit", function (e) {
             e.preventDefault();
             let categoryId = document.getElementById("categorySelect").value;
             let amount = parseFloat(document.getElementById("amount").value);
             let description = document.getElementById("description").value;
             let date = document.getElementById("date").value;
-            amount = amount > 0 ? -amount : amount;
 
-            fetch("/api/v1/outcomes", {
+            fetch("/api/v1/incomes", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ userId, categoryId, amount, description, date })
             })
                 .then(res => res.text())
                 .then(msg => {
-                    document.getElementById("outcomeResponse").innerHTML = `<p class='has-text-success'>${msg}</p>`;
+                    document.getElementById("incomeResponse").innerHTML = `<p class='has-text-success'>${msg}</p>`;
                     setTimeout(() => window.location.reload(), 1000);
                 });
         });
     });
 
-    // Delete outcome
-    function deleteOutcome(id) {
-        fetch(`/api/v1/outcomes/${id}`, { method: "DELETE" })
+    // Handle deletion
+    function deleteIncome(id) {
+        fetch(`/api/v1/incomes/${id}`, { method: "DELETE" })
             .then(() => window.location.reload());
     }
 
-    // Open modal with pre-filled data
-    function editOutcome(id, categoryId, amount, description, date) {
-        document.getElementById("editOutcomeId").value = id;
+    // Open modal with prefilled data
+    function editIncome(id, categoryId, amount, description, date) {
+        document.getElementById("editIncomeId").value = id;
         document.getElementById("editCategorySelect").value = categoryId;
-        document.getElementById("editAmount").value = Math.abs(amount);
+        document.getElementById("editAmount").value = amount;
         document.getElementById("editDescription").value = description;
         document.getElementById("editDate").value = date;
-        document.getElementById("editOutcomeModal").classList.add("is-active");
+        document.getElementById("editIncomeModal").classList.add("is-active");
     }
 
     // Close modal
     function closeEditModal() {
-        document.getElementById("editOutcomeModal").classList.remove("is-active");
+        document.getElementById("editIncomeModal").classList.remove("is-active");
     }
 
-    // Save edited outcome
-    function saveOutcomeChanges() {
-        let id = document.getElementById("editOutcomeId").value;
+    function saveIncomeChanges() {
+        let id = document.getElementById("editIncomeId").value;
         let userId = document.getElementById("authenticatedUserId").value;
         let categoryId = document.getElementById("editCategorySelect").value;
         let amount = parseFloat(document.getElementById("editAmount").value);
         let description = document.getElementById("editDescription").value;
         let date = document.getElementById("editDate").value;
-        amount = amount > 0 ? -amount : amount;
 
-        fetch(`/api/v1/outcomes/${id}`, {
+        fetch(`/api/v1/incomes/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userId, categoryId, amount, description, date })

@@ -1,10 +1,266 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns:th="https://www.thymeleaf.org" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Income Page</title>
+    <!-- Bulma for styling -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css">
+    <!-- HTMX for optional interactivity (not currently used here) -->
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
+<section class="hero is-light is-fullheight">
+    <div class="hero-body">
+        <div class="container">
+            <!-- Welcome Header -->
+            <h1 class="title has-text-black">
+                Welcome, <span th:text="${username}"></span>!
+            </h1>
+            <a href="/home" class="button is-link mb-4">Back to Home</a>
+            <input type="hidden" id="authenticatedUserId" th:value="${userId}">
 
+            <div class="columns">
+                <!-- Category Creation Block -->
+                <div class="column is-half">
+                    <div class="box">
+                        <h2 class="title">Create a Category</h2>
+                        <form id="categoryForm">
+                            <div class="field">
+                                <label class="label">Category Name</label>
+                                <div class="control">
+                                    <input class="input" type="text" id="categoryName" name="categoryName" placeholder="Enter category name" required>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="label">Category Description</label>
+                                <div class="control">
+                                    <input class="input" type="text" id="categoryDescription" name="categoryDescription" placeholder="Enter category description">
+                                </div>
+                            </div>
+                            <button type="submit" class="button is-primary">Add Category</button>
+                        </form>
+                        <div id="categoryResponse"></div>
+                    </div>
+                </div>
+
+                <!-- Income Entry Block -->
+                <div class="column is-half">
+                    <div class="box">
+                        <h2 class="title">Add Income</h2>
+                        <form id="incomeForm">
+                            <div class="field">
+                                <label class="label">Choose Category</label>
+                                <div class="control">
+                                    <div class="select is-fullwidth">
+                                        <select id="categorySelect" name="categoryId" required>
+                                            <option value="">-- Select a Category --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="label">Amount</label>
+                                <div class="control">
+                                    <input class="input" type="number" id="amount" name="amount" placeholder="Enter amount" min="0" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="label">Income Description</label>
+                                <div class="control">
+                                    <input class="input" type="text" id="description" name="description" placeholder="Enter description">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="label">Date</label>
+                                <div class="control">
+                                    <input class="input" type="date" id="date" name="date" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="button is-success">Add Income</button>
+                        </form>
+                        <div id="incomeResponse"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List of Incomes -->
+            <div class="box">
+                <h2 class="title">Your Incomes</h2>
+                <div class="table-container" style="overflow-x: auto;">
+                <table class="table is-fullwidth is-striped is-hoverable">
+                    <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Description</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody id="incomeTableBody">
+                    <tr><td colspan="5" class="has-text-centered">Loading incomes...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    </div>
+</section>
+
+<!-- Modal for Editing Income -->
+<div class="modal" id="editIncomeModal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Edit Income</p>
+            <button class="delete" aria-label="close" onclick="closeEditModal()"></button>
+        </header>
+        <section class="modal-card-body">
+            <input type="hidden" id="editIncomeId">
+            <div class="field">
+                <label class="label">Category</label>
+                <div class="select">
+                    <select id="editCategorySelect"></select>
+                </div>
+            </div>
+            <div class="field">
+                <label class="label">Amount</label>
+                <input class="input" type="number" id="editAmount" step="0.01">
+            </div>
+            <div class="field">
+                <label class="label">Description</label>
+                <input class="input" type="text" id="editDescription">
+            </div>
+            <div class="field">
+                <label class="label">Date</label>
+                <input class="input" type="date" id="editDate">
+            </div>
+        </section>
+        <footer class="modal-card-foot">
+            <button class="button is-success" onclick="saveIncomeChanges()">Save changes</button>
+            <button class="button" onclick="closeEditModal()">Cancel</button>
+        </footer>
+    </div>
+</div>
+
+<!-- Script Section -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const userId = document.getElementById("authenticatedUserId").value;
+
+        // Load category dropdowns
+        fetch("/api/v1/categories")
+            .then(res => res.json())
+            .then(categories => {
+                const categorySelect = document.getElementById("categorySelect");
+                const editCategorySelect = document.getElementById("editCategorySelect");
+                categorySelect.innerHTML = '<option value="">-- Select a Category --</option>';
+                editCategorySelect.innerHTML = '<option value="">-- Select a Category --</option>';
+                categories.forEach(category => {
+                    categorySelect.add(new Option(category.category, category.category_id));
+                    editCategorySelect.add(new Option(category.category, category.category_id));
+                });
+            });
+
+        // Load user's incomes
+        fetch(`/api/v1/incomes/user/${userId}`)
+            .then(res => res.json())
+            .then(incomes => {
+                const tableBody = document.getElementById("incomeTableBody");
+                tableBody.innerHTML = "";
+                incomes.forEach(income => {
+                    let row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${income.category.category}</td>
+                        <td>${income.amount}</td>
+                        <td>${income.description}</td>
+                        <td>${income.date}</td>
+                        <td>
+                            <button class="button is-warning is-small" onclick="editIncome(${income.incomeId}, ${income.category.category_id}, ${income.amount}, '${income.description}', '${income.date}')">Edit</button>
+                            <button class="button is-danger is-small" onclick="deleteIncome(${income.incomeId})">Delete</button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            });
+
+        // Handle category form submission
+        document.getElementById("categoryForm").addEventListener("submit", function (e) {
+            e.preventDefault();
+            let name = document.getElementById("categoryName").value;
+            let desc = document.getElementById("categoryDescription").value;
+            fetch("/api/v1/categories", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ categoryName: name, description: desc })
+            })
+                .then(res => res.text())
+                .then(msg => {
+                    document.getElementById("categoryResponse").innerHTML = `<p class='has-text-success'>${msg}</p>`;
+                    setTimeout(() => window.location.reload(), 1000);
+                });
+        });
+
+        // Handle income form submission
+        document.getElementById("incomeForm").addEventListener("submit", function (e) {
+            e.preventDefault();
+            let categoryId = document.getElementById("categorySelect").value;
+            let amount = parseFloat(document.getElementById("amount").value);
+            let description = document.getElementById("description").value;
+            let date = document.getElementById("date").value;
+
+            fetch("/api/v1/incomes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId, categoryId, amount, description, date })
+            })
+                .then(res => res.text())
+                .then(msg => {
+                    document.getElementById("incomeResponse").innerHTML = `<p class='has-text-success'>${msg}</p>`;
+                    setTimeout(() => window.location.reload(), 1000);
+                });
+        });
+    });
+
+    // Handle deletion
+    function deleteIncome(id) {
+        fetch(`/api/v1/incomes/${id}`, { method: "DELETE" })
+            .then(() => window.location.reload());
+    }
+
+    // Open modal with prefilled data
+    function editIncome(id, categoryId, amount, description, date) {
+        document.getElementById("editIncomeId").value = id;
+        document.getElementById("editCategorySelect").value = categoryId;
+        document.getElementById("editAmount").value = amount;
+        document.getElementById("editDescription").value = description;
+        document.getElementById("editDate").value = date;
+        document.getElementById("editIncomeModal").classList.add("is-active");
+    }
+
+    // Close modal
+    function closeEditModal() {
+        document.getElementById("editIncomeModal").classList.remove("is-active");
+    }
+
+    // Save edits
+    function saveIncomeChanges() {
+        let id = document.getElementById("editIncomeId").value;
+        let userId = document.getElementById("authenticatedUserId").value;
+        let categoryId = document.getElementById("editCategorySelect").value;
+        let amount = parseFloat(document.getElementById("editAmount").value);
+        let description = document.getElementById("editDescription").value;
+        let date = document.getElementById("editDate").value;
+
+        fetch(`/api/v1/incomes/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, categoryId, amount, description, date })
+        })
+            .then(() => window.location.reload())
+            .catch(err => console.error("Failed to save changes:", err));
+    }
+</script>
 </body>
 </html>

@@ -19,7 +19,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/export")
-public class IncomeOutcomeExportController {
+public class IncomeExportController {
 
     private final IncomeService incomeService;
     private final OutcomeService outcomeService;
@@ -30,7 +30,7 @@ public class IncomeOutcomeExportController {
      * @param incomeService  service for income-related operations
      * @param outcomeService service for outcome-related operations
      */
-    public IncomeOutcomeExportController(IncomeService incomeService, OutcomeService outcomeService) {
+    public IncomeExportController(IncomeService incomeService, OutcomeService outcomeService) {
         this.incomeService = incomeService;
         this.outcomeService = outcomeService;
     }
@@ -61,13 +61,7 @@ public class IncomeOutcomeExportController {
         writer.flush();
     }
 
-    /**
-     * Exports all outcome records for a user as a CSV file.
-     *
-     * @param userId   the ID of the user
-     * @param response the HTTP response to write the CSV output to
-     * @throws IOException if an input/output error occurs
-     */
+    
     @GetMapping(value = "/outcomes/{userId}", produces = "text/csv")
     public void exportOutcomesToCSV(@PathVariable Long userId, HttpServletResponse response) throws IOException {
         List<Outcome> outcomes = outcomeService.getOutcomesByUser(userId);
@@ -77,13 +71,8 @@ public class IncomeOutcomeExportController {
         writer.println("Date,Category,Amount,Description");
 
         for (Outcome o : outcomes) {
-            writer.printf("%s,%s,%.2f,%s%n",
-                    o.getDate(),
-                    o.getCategory().getCategory(),
-                    Math.abs(o.getAmount()),
-                    o.getDescription());
+            writer.printf("%s,%s,%.2f,%s%n", o.getDate(), o.getCategory().getCategory(), Math.abs(o.getAmount()), o.getDescription());
         }
-
         writer.flush();
     }
 }

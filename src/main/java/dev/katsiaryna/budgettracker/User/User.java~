@@ -176,9 +176,9 @@ public class User implements UserDetails {
         return true; //Won't use activation logic
     }
 
-    /**
-     * Returns a string representation of the user object.
-     */
+
+
+
     public String toString() {
         return "User(id=" + this.getId() + ", username=" + this.getUsername() + ", password=" + this.getPassword() + ")";
     }

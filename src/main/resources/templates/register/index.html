@@ -1,10 +1,95 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns:th="https://www.thymeleaf.org" lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Register</title>
+    <!-- Bulma CSS for styling -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css">
+
+    <!-- Optional custom font -->
+    <link href="https://fonts.googleapis.com/css?family=Questrial&display=swap" rel="stylesheet">
+
+    <!-- HTMX for AJAX behavior -->
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
-$END$
+<section class="hero is-light is-fullheight">
+    <div class="hero-body">
+        <div class="container has-text-centered">
+            <div class="column is-4 is-offset-4">
+
+                <!-- Page Title -->
+                <h1 class="title has-text-black">Sign Up</h1>
+                <hr class="login-hr">
+                <p class="subtitle has-text-black">Create an account to get started.</p>
+
+                <!-- Registration Box -->
+                <div class="box">
+                    <!-- IU Logo -->
+                    <figure class="avatar">
+                        <img src="https://content.presspage.com/uploads/2867/1920_iu-logo-d-black-rgb-horizontal.png?10000">
+                    </figure>
+
+                    <!-- Registration Form -->
+                    <form method="POST"
+                          hx-post="/api/v1/auth/register"
+                          id="registerForm"
+                          hx-target="#responseMessage"
+                          hx-swap="innerHTML">
+                        <div class="field">
+                            <div class="control">
+                                <input class="input is-large" type="text" id="username" name="username" placeholder="Username" required>
+                            </div>
+                        </div>
+
+                        <!-- Password Field -->
+                        <div class="field">
+                            <div class="control">
+                                <input class="input is-large" type="password" id="password" name="password" placeholder="Password" required>
+                            </div>
+                        </div>
+
+                        <!-- Optional Email Field -->
+                        <div class="field">
+                            <div class="control">
+                                <input class="input is-large" type="email" id="email" name="email" placeholder="Email (optional)">
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="button is-block is-info is-large is-fullwidth">Sign Up <i class="fa fa-user-plus" aria-hidden="true"></i></button>
+                    </form>
+
+                    <!-- Dynamic Message Area -->
+                    <div id="responseMessage"></div>
+
+                    <!-- Redirect Logic After HTMX Submission -->
+                    <script>
+                        document.addEventListener('htmx:afterRequest', function(event) {
+                            if (event.detail.xhr.status === 200) {
+                                // Redirect after successful registration
+                                setTimeout(() => {
+                                    window.location.href = "/login"; // Redirect after successful registration
+                                }, 1500);
+                            } else if (event.detail.xhr.status === 400) {
+                                // If user already exists, show message
+                                document.getElementById("responseMessage").innerHTML =
+                                    '<p class="has-text-danger">' + event.detail.xhr.responseText + '</p>';
+                            }
+                        });
+                    </script>
+                </div>
+
+                <!-- Link to Login -->
+                <p class="has-text-grey">
+                    Already have an account? <a href="/login">Login</a>
+                </p>
+            </div>
+
+        </div>
+    </div>
+</section>
 </body>
 </html>

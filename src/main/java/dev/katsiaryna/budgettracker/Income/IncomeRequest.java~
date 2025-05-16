@@ -109,12 +109,7 @@ public class IncomeRequest {
         this.description = description;
     }
 
-    /**
-     * Sets the date of the income.
-     * @param date the date value
-     */
-    public void setDate(LocalDate date) {
-        this.date = date;
-    }
+
+    public void setDate(LocalDate date) { this.date = date; }
 
 }

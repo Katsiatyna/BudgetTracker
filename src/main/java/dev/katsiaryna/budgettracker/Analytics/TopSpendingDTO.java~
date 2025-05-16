@@ -28,9 +28,6 @@ public class TopSpendingDTO {
         return category;
     }
 
-    /**
-     * @return the amount spent
-     */
     public double getAmount() {
         return amount;
     }

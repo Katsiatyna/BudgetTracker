@@ -84,6 +84,6 @@ public class HomeController {
         String formattedDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         model.addAttribute("currentDateTime", formattedDateTime);
 
-        return "home"; // Renders home.html
+        return "home";
         }
     }

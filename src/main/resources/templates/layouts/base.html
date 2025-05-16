@@ -2,9 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>$Title$</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="${title} ?: 'Budget Tracker'"></title>
+
+  <!-- Bulma CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css">
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.4"></script>
+
+  <!-- Additional Styles -->
+  <th:block th:insert="~{fragments/styles :: extraStyles}"></th:block>
 </head>
 <body>
-$END$
+  <!-- Main Content -->
+  <section class="section">
+    <div class="container">
+      <th:block th:replace="~{::content}"></th:block>
+    </div>
+  </section>
 </body>
 </html>

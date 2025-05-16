@@ -1,24 +1,765 @@
 <!DOCTYPE html>
-<html xmlns:th="https://www.thymeleaf.org" lang="en">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Test Login</title>
+    <title>Home</title>
+
+    <!-- Bulma CSS Framework -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css">
+
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Keep left and right columns scrollable side by side */
+        .columns.fixed-layout {
+            display: flex;
+            align-items: flex-start; /* ensures vertical top alignment */
+            height: auto; /* remove height restriction */
+        }
+
+        .columns.fixed-layout .column {
+            overflow-y: visible; /* allow full content display */
+            padding-right: 1rem;
+
+        }
+        /* Force right column to stay top-aligned */
+        .analytics-column {
+            align-self: flex-start;
+        }
+    </style>
 </head>
+
 <body>
-  <h2>Login</h2>
-  <div th:if="${param.error}">
-    <p style="color: red;"> Username or password is incorrect.</p>
-  </div>
-  <form th:action="@{/login}" method="post">
-    <div>
-      <label for="username">Username:</label>
-      <input type="text" id="username" name="username" required>
+<section class="section">
+    <div class="container">
+
+        <!-- Header Section -->
+        <div class="level">
+            <div class="level-left">
+                <div>
+                    <h1 class="title">Hello, <span th:text="${username}">User</span>!</h1>
+                    <p class="subtitle">Current Date & Time: <span id="currentDateTime"></span></p>
+                    <p class="subtitle">
+                        Current Budget: <strong id="currentBudget">Loading...</strong>
+                    </p>
+                    <ul id="categorySpendingList" class="mb-4"></ul>
+                </div>
+            </div>
+            <div class="level-right">
+                <div class="buttons">
+                    <button class="button is-warning" onclick="openEditModal()">Edit Account</button>
+                    <form id="logoutForm">
+                        <button class="button is-danger" type="submit">Sign Out</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="columns fixed-layout is-multiline mt-4">
+        <!-- Grid Layout: Left and Right Columns -->
+                <!-- Left Column: Incomes, Outcomes, Category Limits -->
+            <div class="column is-full-mobile is-5-tablet is-5-desktop">
+                <!-- Latest Incomes -->
+                <h2 class="title is-5">Latest Incomes</h2>
+                <ul id="latestIncomes"></ul>
+                <div class="buttons mt-2">
+                    <a href="/income" class="button is-link is-small">Go to Income Page</a>
+                    <button id="exportIncomesBtn" class="button is-info is-small">Export Incomes (CSV)</button>
+                </div>
+
+                <!-- Latest Outcomes -->
+                <h2 class="title is-5 mt-5">Latest Outcomes</h2>
+                <ul id="latestOutcomes"></ul>
+                <div class="buttons mt-2">
+                    <a href="/outcome" class="button is-link is-small">Go to Outcome Page</a>
+                    <button id="exportOutcomesBtn" class="button is-info is-small">Export Outcomes (CSV)</button>
+                </div>
+
+                <!-- Set New Category Limit -->
+                <h2 class="title is-5 mt-5">Set New Category Limit</h2>
+                <form id="limitForm" class="box mb-4">
+                    <div class="field">
+                        <label class="label">Category</label>
+                        <div class="control is-expanded">
+                            <div class="select">
+                                <select id="limitCategorySelect" required>
+                                    <option value="" disabled selected>Select category</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label class="label">Limit Amount</label>
+                        <div class="control is-expanded">
+                            <input id="limitAmountInput" class="input" type="number" step="0.01" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="control is-expanded">
+                        <button class="button is-primary" type="submit">Add Limit</button>
+                    </div>
+                </form>
+
+                <!-- View Category Limits -->
+                <h2 class="title is-5 mt-5">Category Limits per Month</h2>
+                <ul id="categoryLimits"></ul>
+            </div>
+
+            <!-- Right Column: Analytics and Goals --><!-- Right Column: Analytics and Goals -->
+            <div class="column is-full-mobile is-7-tablet is-7-desktop analytics-column">
+
+            <!-- Filter Controls -->
+                <div class="field is-grouped">
+                    <div class="control">
+                        <label class="label">From</label>
+                        <input type="date" class="input" id="fromDate">
+                    </div>
+                    <div class="control">
+                        <label class="label">To</label>
+                        <input type="date" class="input" id="toDate">
+                    </div>
+                    <div class="control">
+                        <label class="label">Group by</label>
+                        <div class="select">
+                            <select id="groupBy">
+                                <option value="day">Day</option>
+                                <option value="month">Month</option>
+                                <option value="year">Year</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="control is-align-self-end">
+                        <button class="button is-info mt-5" onclick="loadAnalytics()">Apply</button>
+                    </div>
+                </div>
+
+                <!-- Analytics Charts -->
+                <div class="columns mt-4">
+                    <div class="column is-full-mobile is-half-tablet"><canvas id="lineChart"></canvas></div>
+                    <div class="column is-full-mobile is-half-tablet"><canvas id="barChart"></canvas></div>
+                </div>
+
+                <div class="columns mt-5">
+                    <div class="column"><canvas id="incomeCategoryChart"></canvas></div>
+                    <div class="column"><canvas id="outcomeCategoryChart"></canvas></div>
+                </div>
+
+                <!-- Top Spendings -->
+                <div class="columns mt-5">
+                    <div class="column is-full">
+                        <div class="box">
+                            <h2 class="title is-5">Top 5 Spendings by Category</h2>
+                            <canvas id="topSpendingsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Goals Section -->
+                <div class="columns is-multiline mt-6">
+                    <!-- Goal Display -->
+                    <div class="column is-full-mobile is-6-tablet">
+                        <div class="box">
+                            <h2 class="title is-5">Savings Goals</h2>
+                            <div id="savingsGoalContainer"></div>
+                        </div>
+                        <div class="box mt-4">
+                            <h2 class="title is-5">Debt Goals</h2>
+                            <div id="debtGoalContainer"></div>
+                        </div>
+                        <div class="box mt-4">
+                            <h2 class="title is-5">Mortgage Goals</h2>
+                            <div id="mortgageGoalContainer"></div>
+                        </div>
+                    </div>
+
+                    <!-- Add Goal Form -->
+                    <div class="column is-full-mobile is-6-tablet">
+                        <div class="box">
+                            <h2 class="title is-5">Add Goal</h2>
+                            <form id="goalForm">
+                                <div class="field">
+                                    <label class="label">Type</label>
+                                    <div class="control is-expanded">
+                                        <div class="select">
+                                            <select id="goalType" required>
+                                                <option value="Savings">Savings</option>
+                                                <option value="Debt">Debt</option>
+                                                <option value="Mortgage">Mortgage</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Name and Category -->
+                                <div class="field">
+                                    <label class="label">Name</label>
+                                    <div class="control is-expanded">
+                                        <input id="goalName" class="input" type="text" required>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label class="label">Goal Category</label>
+                                    <div class="control is-expanded">
+                                        <input id="goalCategory" class="input" type="text" placeholder="e.g., University, Travel" required>
+                                    </div>
+                                </div>
+
+                                <!-- Financial Inputs -->
+                                <div class="field">
+                                    <label class="label">Target Amount</label>
+                                    <div class="control is-expanded">
+                                        <input id="goalTarget" class="input" type="number" step="0.01" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label class="label">Current Amount</label>
+                                    <div class="control is-expanded">
+                                        <input id="goalCurrent" class="input" type="number" step="0.01" min="0" required>
+                                    </div>
+                                </div>
+
+                                <!-- Date Range -->
+                                <div class="field">
+                                    <label class="label">Start Date</label>
+                                    <div class="control is-expanded">
+                                        <input id="goalStart" class="input" type="date" required>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label class="label">End Date</label>
+                                    <div class="control is-expanded">
+                                        <input id="goalEnd" class="input" type="date" required>
+                                    </div>
+                                </div>
+
+                                <!-- Submit -->
+                                <div class="control mt-2">
+                                    <button type="submit" class="button is-primary">Save Goal</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div> <!-- End Goal Columns -->
+            </div> <!-- End Right Column -->
+        </div> <!-- End Columns -->
     </div>
-    <div>
-      <label for="password">Password:</label>
-      <input type="password" id="password" name="password" required>
+</section>
+
+<!-- Hidden User ID Field -->
+<input type="hidden" id="authenticatedUserId" th:value="${userId}">
+
+<!-- Chart and App Logic -->
+<script>
+    // Runs once the DOM is fully loaded
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("currentDateTime").textContent = new Date().toLocaleString();
+        const now = new Date();
+        document.getElementById("fromDate").value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+        document.getElementById("toDate").value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+
+        // Handle account update form submission
+        document.getElementById("editAccountForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const userId = document.getElementById("authenticatedUserId").value;
+            const username = document.getElementById("editUsername").value;
+            const password = document.getElementById("editPassword").value;
+            const email = document.getElementById("editEmail").value;
+
+            fetch(`/api/v1/auth/users/update/${userId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password, email })
+            }).then(() => {
+                closeEditModal();
+                location.reload();
+            });
+        });
+
+        // Initial data loading functions
+        loadOverview();
+        loadAnalytics();
+        loadCategoryCharts();
+        loadCategoryLimits();
+        loadCategoryDropdown();
+        loadGoals();
+        loadTopSpendingsChart();
+    });
+
+    // Loads overall budget summary and latest transactions
+    function loadOverview() {
+        const userId = document.getElementById("authenticatedUserId").value;
+
+        fetch(`/api/v1/analytics/summary/${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("currentBudget").textContent = data.budget.toFixed(2);
+            });
+
+        fetch(`/api/v1/analytics/latest/${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("latestIncomes").innerHTML = data.incomes.map(i =>
+                    `<li>${i.date}: +${i.amount} (${i.description})</li>`).join("");
+                document.getElementById("latestOutcomes").innerHTML = data.outcomes.map(o =>
+                    `<li>${o.date}: -${Math.abs(o.amount)} (${o.description})</li>`).join("");
+            });
+
+        loadCategorySpendingList();
+    }
+
+    // Loads the category spending summary and applies warning if 90% spent
+    function loadCategorySpendingList() {
+        const userId = document.getElementById("authenticatedUserId").value;
+        const from = document.getElementById("fromDate").value;
+        const to = document.getElementById("toDate").value;
+
+        fetch(`/api/v1/budgets/user-with-spent/${userId}?from=${from}&to=${to}`)
+                .then(res => res.json())
+            .then(data => {
+                if (!Array.isArray(data)) return;
+
+                const container = document.getElementById("categorySpendingList");
+                container.innerHTML = "";
+                data.forEach(entry => {
+                    const ratio = entry.spent / entry.limit;
+                    const className = ratio >= 0.9 ? "has-text-danger" : "has-text-black";
+                    const warning = ratio >= 0.9 ? "⚠️" : "";
+                    const li = document.createElement("li");
+                    li.className = className;
+                    li.innerHTML = `${entry.category}: ${entry.spent.toFixed(2)} / ${entry.limit.toFixed(2)} ${warning}`;
+                    container.appendChild(li);
+                });
+            })
+    }
+
+    // Loads and renders time-based analytics charts (line and bar)
+    function loadAnalytics() {
+        const userId = document.getElementById("authenticatedUserId").value;
+        const from = document.getElementById("fromDate").value;
+        const to = document.getElementById("toDate").value;
+        const groupBy = document.getElementById("groupBy").value;
+
+        fetch(`/api/v1/analytics/chart?userId=${userId}&from=${from}&to=${to}&groupBy=${groupBy}`)
+            .then(res => res.json())
+            .then(data => {
+                renderChart("lineChart", data, "line");
+                renderChart("barChart", data, "bar");
+            });
+        // Refresh all data according to selected dates
+        loadCategorySpendingList(); // updates limits
+        loadCategoryCharts();       // updates category pie chart
+        loadTopSpendingsChart();    // updates Top 5
+    }
+
+    // Re-usable chart renderer (line and bar)
+    function renderChart(canvasId, data, type) {
+        const ctx = document.getElementById(canvasId).getContext("2d");
+        if (window[canvasId + "Chart"]) window[canvasId + "Chart"].destroy();
+        window[canvasId + "Chart"] = new Chart(ctx, {
+            type: type,
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: "Incomes",
+                        data: data.incomes,
+                        borderColor: "green",
+                        backgroundColor: type === "bar" ? "rgba(0,128,0,0.4)" : "transparent",
+                        fill: false
+                    },
+                    {
+                        label: "Outcomes",
+                        data: data.outcomes.map(o => Math.abs(o)),
+                        borderColor: "red",
+                        backgroundColor: type === "bar" ? "rgba(255,0,0,0.4)" : "transparent",
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    // Loads pie charts for income/outcome by category
+    function loadCategoryCharts() {
+        const userId = document.getElementById("authenticatedUserId").value;
+        const from = document.getElementById("fromDate").value;
+        const to = document.getElementById("toDate").value;
+
+        fetch(`/api/v1/analytics/category-summary/${userId}?from=${from}&to=${to}`)
+                .then(res => res.json())
+            .then(data => {
+                if (!data || !data.income || !data.outcome) return;
+
+                renderPieChart("incomeCategoryChart", Object.keys(data.income), Object.values(data.income), "Income by Category");
+                renderPieChart("outcomeCategoryChart", Object.keys(data.outcome), Object.values(data.outcome), "Outcome by Category");
+            });
+    }
+
+
+    function loadTopSpendingsChart() {
+        const userId = document.getElementById("authenticatedUserId").value;
+        const from = document.getElementById("fromDate").value;
+        const to = document.getElementById("toDate").value;
+
+        fetch(`/api/v1/analytics/top-spendings/${userId}?from=${from}&to=${to}`)
+                .then(res => res.json())
+            .then(data => {
+                if (!Array.isArray(data)) return;
+                const labels = data.map(item => item.category);
+                const values = data.map(item => item.amount);
+
+                const ctx = document.getElementById("topSpendingsChart").getContext("2d");
+
+                if (window.topSpendingsChart instanceof Chart) {
+                    window.topSpendingsChart.destroy();
+                }
+
+                window.topSpendingsChart = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: "Total Spending",
+                            data: values,
+                            backgroundColor: "rgba(255,99,132,0.6)",
+                            borderColor: "rgba(255,99,132,1)",
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: true,
+                                text: 'Top Spendings by Category'
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            });
+    }
+
+    // Renders pie charts for income/outcome
+    function renderPieChart(canvasId, labels, values, title) {
+        const ctx = document.getElementById(canvasId).getContext("2d");
+        if (window[canvasId + "Chart"]) window[canvasId + "Chart"].destroy();
+        window[canvasId + "Chart"] = new Chart(ctx, {
+            type: "pie",
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: ['#4CAF50', '#81C784', '#66BB6A', '#A5D6A7', '#C8E6C9', '#FF7043', '#EF5350', '#FF8A65']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: { display: true, text: title },
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    // Loads category limits for the current user
+    function loadCategoryLimits() {
+        const userId = document.getElementById("authenticatedUserId").value;
+        fetch(`/api/v1/budgets/user/${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                const list = document.getElementById("categoryLimits");
+                list.innerHTML = "";
+                data.filter(b => b.category != null).forEach(limit => {
+                    const name = limit.category.category;
+                    const amount = limit.limitAmount.toFixed(2);
+                    const id = limit.budgetId;
+                    list.innerHTML += `
+                    <li class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                        <span><strong>${name}</strong>: ${amount}</span>
+                        <span>
+                            <button class="button is-small is-warning mr-1" onclick="editLimit(${id}, ${amount})">Edit</button>
+                            <button class="button is-small is-danger" onclick="deleteLimit(${id})">Delete</button>
+                        </span>
+                    </li>`;
+                });
+            });
+    }
+
+    // Deletes a category limit by its ID
+    function deleteLimit(budgetId) {
+        fetch(`/api/v1/budgets/${budgetId}`, { method: "DELETE" }).then(() => {
+            loadCategoryLimits();
+            loadCategorySpendingList();
+        });
+    }
+
+    // Edits a category limit (via prompt input)
+    function editLimit(budgetId, oldLimit) {
+        const newLimit = prompt("Enter new limit:", oldLimit);
+        if (newLimit !== null) {
+            fetch(`/api/v1/budgets/update/${budgetId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ limitAmount: parseFloat(newLimit) })
+            }).then(() => {
+                loadCategoryLimits();
+                loadCategorySpendingList();
+            });
+        }
+    }
+
+    // Loads dropdown of available categories for assigning limits
+    function loadCategoryDropdown() {
+        fetch("/api/v1/categories")
+            .then(res => res.json())
+            .then(categories => {
+                const select = document.getElementById("limitCategorySelect");
+                select.innerHTML = '<option value="">Select category</option>';
+                categories.forEach(category => {
+                    const option = document.createElement("option");
+                    option.value = category.category_id;
+                    option.text = category.category;
+                    select.appendChild(option);
+                });
+            });
+    }
+
+    // Handles the submission of the new category limit form
+    document.getElementById("limitForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const userId = parseInt(document.getElementById("authenticatedUserId").value);
+        const categoryId = parseInt(document.getElementById("limitCategorySelect").value);
+        const amount = parseFloat(document.getElementById("limitAmountInput").value);
+
+        fetch("/api/v1/budgets/set-category-limit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, categoryId, limitAmount: amount })
+        }).then(() => {
+            loadCategoryLimits();
+            loadCategorySpendingList();
+            document.getElementById("limitForm").reset();
+        });
+    });
+
+
+    function loadGoals() {
+        const userId = document.getElementById("authenticatedUserId").value;
+        fetch(`/api/v1/goals/user/${userId}`)
+            .then(res => res.json())
+            .then(goals => {
+                const grouped = {
+                    Savings: {},
+                    Debt: {},
+                    Mortgage: {}
+                };
+
+                goals.forEach(goal => {
+                    if (!grouped[goal.type][goal.goalCategory]) {
+                        grouped[goal.type][goal.goalCategory] = [];
+                    }
+                    grouped[goal.type][goal.goalCategory].push(goal);
+                });
+
+                renderGoalSection("savingsGoalContainer", grouped.Savings);
+                renderGoalSection("debtGoalContainer", grouped.Debt);
+                renderGoalSection("mortgageGoalContainer", grouped.Mortgage);
+            });
+    }
+
+    // Renders a list of goals inside a collapsible section grouped by category
+    function renderGoalSection(containerId, categoryMap) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = "";
+
+        Object.keys(categoryMap).forEach(categoryName => {
+            const goals = categoryMap[categoryName];
+
+            const details = document.createElement("details");
+            details.className = "mb-2";
+            const summary = document.createElement("summary");
+            summary.innerHTML = `<strong>${categoryName}</strong> (${goals.length})`;
+            details.appendChild(summary);
+
+            goals.forEach(goal => {
+                const progress = ((goal.currentAmount / goal.targetAmount) * 100).toFixed(1);
+                const isCompleted = goal.currentAmount >= goal.targetAmount;
+                const goalDiv = document.createElement("div");
+                goalDiv.className = `box is-shadowless p-2 mb-1 ${isCompleted ? 'has-background-success-light has-text-success-dark' : ''}`;
+                goalDiv.innerHTML = `
+                <strong>${goal.name}</strong><br>
+                ${goal.currentAmount.toFixed(2)} / ${goal.targetAmount.toFixed(2)} (${progress}%)<br>
+                <small>Start: ${goal.startDate} | End: ${goal.endDate}</small><br>
+                <button class="button is-small is-success mr-1 mt-1" onclick="updateGoal(${goal.goalId})">Update</button>
+                <button class="button is-small is-danger mt-1" onclick="deleteGoal(${goal.goalId})">Delete</button>
+            `;
+                details.appendChild(goalDiv);
+            });
+
+            container.appendChild(details);
+        });
+    }
+
+    // Sends request to delete a goal
+    function deleteGoal(goalId) {
+        fetch(`/api/v1/goals/${goalId}`, { method: "DELETE" })
+            .then(() => loadGoals());
+    }
+
+    // Updates the current amount of a goal (via prompt)
+    function updateGoal(goalId) {
+        const newAmount = prompt("Enter new current amount:");
+        if (newAmount !== null && !isNaN(newAmount)) {
+            fetch(`/api/v1/goals/progress/${goalId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: newAmount
+            }).then(() => {
+                loadGoals();
+            });
+        }
+    }
+
+    // Export functions
+    function exportCSV(type) {
+        const userId = document.getElementById("authenticatedUserId").value;
+        const from = document.getElementById("fromDate").value;
+        const to = document.getElementById("toDate").value;
+        const url = `/api/v1/${type}/export?userId=${userId}&from=${from}&to=${to}`;
+        window.location.href = url;
+    }
+
+    // Submits a new goal to the backend
+    document.getElementById("goalForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const userId = parseInt(document.getElementById("authenticatedUserId").value);
+        const type = document.getElementById("goalType").value;
+        const name = document.getElementById("goalName").value;
+        const goalCategory = document.getElementById("goalCategory").value;
+        const targetAmount = parseFloat(document.getElementById("goalTarget").value);
+        const currentAmount = parseFloat(document.getElementById("goalCurrent").value);
+        const startDate = document.getElementById("goalStart").value;
+        const endDate = document.getElementById("goalEnd").value;
+
+        fetch("/api/v1/goals", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                user: { id: userId },
+                type,
+                name,
+                goalCategory,
+                targetAmount,
+                currentAmount,
+                startDate,
+                endDate
+            })
+        }).then(() => {
+            document.getElementById("goalForm").reset();
+            loadGoals();
+        });
+    });
+
+    // Logs out the user and redirects to login
+    document.getElementById("logoutForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        fetch("/api/v1/auth/logout", {
+            method: "POST"
+        }).then(() => {
+            window.location.href = "/login";
+        });
+    });
+
+    // Exports income data to CSV using selected date range
+    document.getElementById("exportIncomesBtn").addEventListener("click", () => {
+        const userId = document.getElementById("authenticatedUserId").value;
+        const from = document.getElementById("fromDate").value;
+        const to = document.getElementById("toDate").value;
+        window.location.href = `/api/v1/incomes/export?userId=${userId}&from=${from}&to=${to}`;
+    });
+
+    // Exports outcome data to CSV using selected date range
+    document.getElementById("exportOutcomesBtn").addEventListener("click", () => {
+        const userId = document.getElementById("authenticatedUserId").value;
+        const from = document.getElementById("fromDate").value;
+        const to = document.getElementById("toDate").value;
+        window.location.href = `/api/v1/outcomes/export?userId=${userId}&from=${from}&to=${to}`;
+    });
+
+    // Opens the edit account modal
+    function openEditModal() {
+        const modal = document.getElementById("editAccountModal");
+        modal.classList.add("is-active");
+
+        const userId = document.getElementById("authenticatedUserId").value;
+        fetch(`/api/v1/auth/users/${userId}`)
+            .then(res => res.json())
+            .then(user => {
+                document.getElementById("editUsername").value = user.username;
+                document.getElementById("editEmail").value = user.email;
+
+            });
+    }
+
+    // Closes the edit account modal
+    function closeEditModal() {
+        const modal = document.getElementById("editAccountModal");
+        modal.classList.remove("is-active");
+    }
+
+
+</script>
+
+<!-- Edit Account Modal -->
+<div class="modal" id="editAccountModal">
+    <div class="modal-background" onclick="closeEditModal()"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Edit Account</p>
+            <button class="delete" aria-label="close" onclick="closeEditModal()"></button>
+        </header>
+        <section class="modal-card-body">
+            <form id="editAccountForm">
+                <div class="field">
+                    <label class="label">Username</label>
+                    <div class="control">
+                        <input class="input" type="text" id="editUsername" required>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="label">Password</label>
+                    <div class="control">
+                        <input class="input" type="password" id="editPassword" required>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="label">Email</label>
+                    <div class="control is-expanded">
+                        <input class="input" type="email" id="editEmail" required>
+                    </div>
+                </div>
+
+                <div class="control mt-4">
+                    <button type="submit" class="button is-success">Save Changes</button>
+                </div>
+            </form>
+        </section>
     </div>
-    <button type="submit">Login</button>
-  </form>
+</div>
 </body>
 </html>

@@ -1,4 +1,4 @@
-package dev.katsiaryna.budgettracker.Income;
+package dev.katsiaryna.budgettracker.Outcome;
 
 import dev.katsiaryna.budgettracker.User.User;
 import dev.katsiaryna.budgettracker.User.UserRepository;
@@ -10,27 +10,28 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 /**
- * Controller responsible for rendering the income view page (Thymeleaf).
+ * Controller to render the outcome (expenses) entry page using Thymeleaf.
+ * This controller fetches the authenticated user's information and passes it to the frontend.
  */
 @Controller
-public class IncomeViewController {
+public class OutcomeViewController {
 
     @Autowired
     private UserRepository userRepository;
 
     /**
-     * Handles GET request to the income page.
-     * Validates the authenticated user and injects their username and ID into the model.
+     * Displays the outcome page for the currently authenticated user.
+     * It adds the username and userId to the Thymeleaf model for frontend rendering.
      *
-     * @param model The Spring MVC model for passing data to the Thymeleaf view.
-     * @return The view name for the income page or redirects to login if not authenticated.
+     * @param model Thymeleaf model used to pass data to the view
+     * @return name of the Thymeleaf HTML template, or redirect to login page if unauthenticated
      */
-    @GetMapping("/income")
-    public String showIncomePage(Model model) {
+    @GetMapping("/outcome")
+    public String showOutcomePage(Model model) {
         // Fetch the authentication from security context
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // If user is not authenticated, redirect to login
+        // Ensure the user is authenticated before proceeding
         if (authentication == null) {
             System.out.println("Authentication is null. Redirecting to login.");
             return "redirect:/login";
@@ -40,16 +41,18 @@ public class IncomeViewController {
             return "redirect:/login";
         }
 
-        // Get the authenticated username
+        // Fetch username from Spring Security context
         String username = authentication.getName();
         model.addAttribute("username", username);
 
-        // Look up the user entity and add their ID to the model
+        // Retrieve user ID from database and pass it to the view
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         model.addAttribute("userId", user.getId());
 
-        // Return Thymeleaf view for income
-        return "income/index";
+        // Render the outcome/index.html page
+        return "outcome/index";
     }
+
+    
 }
